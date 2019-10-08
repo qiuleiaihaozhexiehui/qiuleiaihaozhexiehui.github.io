@@ -5,64 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
     <title>测试题</title>
-    <style>
-      * {
-        margin: 0;
-        padding: 0;  
-      }
-      .contenttitle{
-          width: 100%;
-          height: 50px;
-          margin-top: 15px;
-          line-height: 50px;
-          background: #f7f7f7;
-          text-align: center;
-      }
-      .panelcontainer{
-          width: 100%;
-          border-top: 3px solid #efefef;
-      }
-      .panelinfo{
-          width: 85%;
-          height: auto;
-          line-height: 32px;
-          margin: 0 auto;
-          border-bottom: 1px solid #e4e4e4;
-      }
-      .panelres{
-          width: 85%;
-          margin: 0 auto;
-          padding: 10px 0;
-          height: auto;
-      }
-      .panelres .panelitem{
-          line-height: 32px;
-          display: block;
-          background: #fff;
-          color: #666;
-      }
-      .contentbutton{
-          width: 100%;
-          height: 45px;
-          line-height: 45px;
-          background-color: #f7f7f7;
-          position: fixed;
-          bottom: 0;
-          z-index: 1000;
-      }
-      .contentbutton button{
-          background: #389fc3;
-          border: 0;
-          display: block;
-          width: 80px;
-          height: 45px;
-          cursor: pointer;
-          color: #fff;
-          font-size: 16px;
-          font-weight: 700;
-          float: right;
-      }
-    </style>
+    <link rel="stylesheet" href="index.css"/>
   </head>
   <body>
     <div class="container"></div>
@@ -113,12 +56,12 @@
                   itemContainer.classList.add(_this.panelClass);
       
                   let answerGroup = document.createElement('div');
-                  itemContainer.classList.add(_this.panelResClass);
+                  answerGroup.classList.add(_this.panelResClass);
                   answerGroup.innerHTML = (function(){
                       let temp = [];
                       let type = _this.type === 'sigle' ? 'radio' : 'checkbox';
                       for(let key in _this.choice){
-                          temp.push(`<div class='${_this.itemClass}'><input type='${type}' name='${_this.id}' value='${key}' />${_this.choice[key]}</div>`);
+                          temp.push(`<div class='${_this.itemClass}'><input type='${type}' name='${_this.id}' value='${key}' />${key}、${_this.choice[key]}</div>`);
                       }
                       return temp.join('');
                   })();
@@ -128,7 +71,7 @@
                   itemContainer.appendChild((function(){
                       let temp = document.createElement('div');
                       temp.classList.add(_this.panelInfoClass);
-                      temp.innerHTML = `${_this.name}`;
+                      temp.innerHTML = `${_this.id}、${_this.name}`;
                       return temp;
                   })());
                   // 渲染答案组
