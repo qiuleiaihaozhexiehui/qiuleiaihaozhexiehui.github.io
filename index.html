@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+    <title>测试题</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;  
+      }
+      .contenttitle{
+          width: 100%;
+          height: 50px;
+          margin-top: 15px;
+          line-height: 50px;
+          background: #f7f7f7;
+          text-align: center;
+      }
+      .panelcontainer{
+          width: 100%;
+          border-top: 3px solid #efefef;
+      }
+      .panelinfo{
+          width: 85%;
+          height: auto;
+          line-height: 32px;
+          margin: 0 auto;
+          border-bottom: 1px solid #e4e4e4;
+      }
+      .panelres{
+          width: 85%;
+          margin: 0 auto;
+          padding: 10px 0;
+          height: auto;
+      }
+      .panelres .panelitem{
+          line-height: 32px;
+          display: block;
+          background: #fff;
+          color: #666;
+      }
+      .contentbutton{
+          width: 100%;
+          height: 45px;
+          line-height: 45px;
+          background-color: #f7f7f7;
+          position: fixed;
+          bottom: 0;
+          z-index: 1000;
+      }
+      .contentbutton button{
+          background: #389fc3;
+          border: 0;
+          display: block;
+          width: 80px;
+          height: 45px;
+          cursor: pointer;
+          color: #fff;
+          font-size: 16px;
+          font-weight: 700;
+          float: right;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container"></div>
+    <script>
+      window.onload = function(){
+          // 初始化题库
+          let itemPool = [
+              {id:1, type: 'sigle', name:'题目一', choice:{a: '答案一', b: '答案二', c: '答案三'}, answer:'a'},
+              {id:2, type: 'mutil', name:'题目二', choice:{a: '答案一', b: '答案二', c: '答案三'}, answer:['a', 'b']},
+              {id:3, type: 'sigle', name:'题目三', choice:{a: '答案一', b: '答案二', c: '答案三'}, answer:'a'},
+          ];
+      
+          // 答题区域的对象
+          class AnswerBoard{
+              constructor(test){
+                  this.test = test;
+              }
+              info(){
+                  this.result = 0;
+                  for(let i of this.test){
+                      this.result += i.score;
+                  }
+                  alert(`你获得了${this.result}分`);
+              }
+          }
+      
+          // 每一道题目的对象
+          class Item{
+              constructor(item){
+                  this.id = item.id;
+                  this.type = item.type;
+                  this.name = item.name;
+                  this.choice = item.choice;
+                  this.answer = item.answer;
+                  this.score = 0;
+      
+                  this.panelId = `panel-${this.id}`;
+                  this.panelClass = 'panelcontainer';
+                  this.panelInfoClass = 'panelinfo';
+                  this.panelResClass = 'panelres';
+                  this.itemClass = 'panelitem'
+              }
+              update(){
+                  let _this = this;
+      
+                  let itemContainer = document.createElement('div');
+                  itemContainer.setAttribute('id', _this.panelId);
+                  itemContainer.classList.add(_this.panelClass);
+      
+                  let answerGroup = document.createElement('div');
+                  itemContainer.classList.add(_this.panelResClass);
+                  answerGroup.innerHTML = (function(){
+                      let temp = [];
+                      let type = _this.type === 'sigle' ? 'radio' : 'checkbox';
+                      for(let key in _this.choice){
+                          temp.push(`<div class='${_this.itemClass}'><input type='${type}' name='${_this.id}' value='${key}' />${_this.choice[key]}</div>`);
+                      }
+                      return temp.join('');
+                  })();
+                  answerGroup.addEventListener('click', this.onClick.bind(this, answerGroup));
+      
+                  // 渲染题目信息
+                  itemContainer.appendChild((function(){
+                      let temp = document.createElement('div');
+                      temp.classList.add(_this.panelInfoClass);
+                      temp.innerHTML = `${_this.name}`;
+                      return temp;
+                  })());
+                  // 渲染答案组
+                  itemContainer.appendChild(answerGroup);
+                  return itemContainer;
+              }
+              onClick(e){
+                  let _this = this;                        
+                  let group = e.querySelectorAll(`input[name='${_this.id}']`);
+      
+                  // 根据不同的题目类型进行分数计算
+                  if (_this.type === 'sigle'){
+                      _this.countScoreSigle(group);
+                  }else if(_this.type === 'mutil'){
+                      _this.countScoreMutil(group);
+                  }
+              }
+              countScoreSigle(group){
+                  let _this = this;
+                  for (let i = 0; i < group.length; i++) { //遍历Radio 
+                      if (group[i].checked && group[i].value === _this.answer) {
+                          this.score = 5;
+                          return;                
+                      }
+                  }
+                  // 如果没有选择对，那么就结果为false
+                  this.score = 0;
+              }
+              countScoreMutil(group){
+                  let _this = this;
+                  // 获取标准答案
+                  let result = typeof _this.answer === 'string' ? [_this.answer] : _this.answer;
+                  // 获取有哪些选项
+                  let selected = [];
+                  for (let i = 0; i < group.length; i++) { //遍历Radio 
+                      if (group[i].checked) {
+                          selected.push(group[i].value);               
+                      }
+                  }
+                  let judge = function(A, B){
+                      for (var elem of B) {
+                          if (A.indexOf(elem) === -1) {
+                              return false;
+                          }
+                      }
+                      return true;
+                  }
+                  // 多选不得分
+                  if(selected.length > result.length && judge(selected, result)){
+                      _this.score = 0;
+                  }
+                  // 选错一个不得分
+                  // else if(judge(result, selected)){
+                  //    _this.score = 0;
+                  // }
+                  // 少选得三分
+                  else if(selected.length < result.length && judge(result, selected)){
+                      // 少选
+                      _this.score = 3;
+                  }                        
+                  // 刚好得五分
+                  else if(selected.length == result.length && judge(result, selected)){
+                      _this.score = 5;
+                  }
+                  else{
+                      _this.score = 0;
+                  }
+              }
+          }
+      
+          // 题库的对象
+          class Test{
+              constructor(options){
+                  this.el = options.el
+                  this.name = options.name || '暂未名命'
+                  this.items = [];
+                  this.titleClass = 'contenttitle';
+                  this.buttonClass = 'contentbutton';
+                  // 初始化题目
+                  this.init(options.data);
+                  // 初始化答题板
+                  this.answerBoard = new AnswerBoard(this.items);         
+                  // 渲染dom并且监听事件
+                  this.update();
+              }
+              init(itemPool){
+                  for(let item of itemPool){
+                      this.items.push(new Item(item));
+                  }
+              }
+              update(){
+                  let _this = this;
+                  let board = document.querySelector(_this.el);
+                  // 渲染文章标题
+                  board.appendChild((function(){
+                      let title = document.createElement('div');
+                      title.classList.add(_this.titleClass);
+                      title.innerHTML = `<p>${_this.name}</p>`;
+                      return title;
+                  })());
+                  for(let i of _this.items){
+                      // 渲染题目以及答案组
+                      board.appendChild(i.update());
+                  }
+                  // 渲染按钮组
+                  board.appendChild((function(){
+                      let temp = document.createElement('div');
+                      temp.classList.add(_this.buttonClass);
+      
+                      let confirm = document.createElement('button');
+                      confirm.innerText = '提交';
+                      confirm.addEventListener('click', _this.confirm.bind(_this));
+      
+                      temp.appendChild(confirm)
+                      return temp;
+                  })());
+              }
+              confirm(){
+                  this.answerBoard.info();
+              }
+          }
+      
+          let test = new Test({
+              el: '.container',
+              name: '这是一个调查问卷',
+              data: itemPool
+          });
+      }
+    </script>
+  </body>
+</html>
