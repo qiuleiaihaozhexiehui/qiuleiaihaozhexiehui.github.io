@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+    <title>登录</title>
+    <link rel="stylesheet" href="login.css"/>
+  </head>
+  <body>
+    <div class="g-container">
+      <h2>登录</h2>
+      <form data-form-role="login" data-form-url="/dist/timu.html" data-form-method="GET">
+        <div class="g-username">
+          <input class="input" data-login-param="data-login-param" name="number" autocomplete="false" type="text" maxlength="64" placeholder="请输入学号"/><img class="g-username" src="https://b-gold-cdn.xitu.io/v3/static/img/greeting.1415c1c.png"/>
+        </div>
+        <div class="g-password">
+          <input class="input" data-login-param="data-login-param" name="name" autocomplete="false" type="text" maxlength="64" placeholder="请输入姓名"/><img class="g-password" src="https://b-gold-cdn.xitu.io/v3/static/img/blindfold.58ce423.png"/>
+        </div>
+        <div class="g-submit">
+          <input class="g-btn" type="submit" value="登录"/>
+        </div><img class="g-normal" src="https://b-gold-cdn.xitu.io/v3/static/img/normal.0447fe9.png" value="登录"/>
+      </form>
+    </div>
+    <script>
+      let getUrl = function(baseurl, param){
+          let temp = [];
+          for(let [key, value] of param){
+              temp.push(`${key}=${value}`);
+          }
+          return [baseurl, '?', temp.join('&')].join('');
+      }
+      window.onload = function(){
+          document.querySelector('*[data-form-role]').addEventListener('submit', function(event){
+              let _this = this;
+              event.preventDefault();
+              let action = _this.getAttribute('data-form-role');
+              let method = _this.getAttribute('data-form-method');
+              let url = _this.getAttribute('data-form-url');
+      
+              let param = (function(){
+                  let temp = new Map();
+                  let paramsDom = _this.querySelectorAll(`*[data-${action}-param]`);
+                  for(let i of paramsDom){
+                      temp.set( i.name, i.value );
+                  }
+                  return temp;
+              })();
+              //- console.log(getUrl(url, param));
+              window.location.href = getUrl(url, param);
+          })
+      }  
+    </script>
+  </body>
+</html>
