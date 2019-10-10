@@ -5,38 +5,120 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
     <title>测试题</title>
-    <link rel="stylesheet" href="index.css"/>
+    <link rel="stylesheet" href="static/default/css/timu.css"/>
   </head>
   <body>
     <div class="container"></div>
     <script>
+      // 工具函数>>
+      let getQueryVariable = function(variable)
+      {
+          var query = window.location.search.substring(1);
+          var vars = query.split("&");
+          for (var i=0;i<vars.length;i++) {
+                  var pair = vars[i].split("=");
+                  if(pair[0] == variable){return pair[1];}
+          }
+          return(false);
+      }
+      // <<工具函数
+      let getData = function(){
+          return new Promise((resolve, reject) => {
+              fetch('timu.json')
+              .then(res => resolve(res.json()))
+              .catch(err => console.log(err));
+          })
+      };
+      let run = async function(Test){
+          let number = getQueryVariable('number') || (window.location.href='/dist/login.html');
+          let name = getQueryVariable('name') || (window.location.href='/dist/login.html');
+          let timuData = await getData();
+          
+          let test = new Test({
+              el: '.container',
+              number: number,
+              name: name,
+              data: timuData
+          });
+      };
       window.onload = function(){
-          // 初始化题库
-          let itemPool = [
-              {id:1, type: 'sigle', name:'题目一', choice:{a: '答案一', b: '答案二', c: '答案三'}, answer:'a'},
-              {id:2, type: 'mutil', name:'题目二', choice:{a: '答案一', b: '答案二', c: '答案三'}, answer:['a', 'b']},
-              {id:3, type: 'sigle', name:'题目三', choice:{a: '答案一', b: '答案二', c: '答案三'}, answer:'a'},
-          ];
+          // 答题展示的弹窗
+          class Layer{
+              constructor(name, number){
+                  this.name = name;
+                  this.number = number;
+                  this.initDom();
+                  this.onAction();    
+              }
+              initDom(){
+                  let domString = `
+                      <div class="cd-popup" role="alert">
+                          <div class="cd-popup-container">
+                              <p class="cd-popup-content">这里是弹出内容</p>
+                              <ul class="cd-buttons">
+                              <li><a href="#0">Yes</a></li>
+                              <li><a href="#0">No</a></li>
+                              </ul>
+                              <a class="cd-popup-close img-replace" href="#0">Close</a>
+                          </div>
+                      </div>`;
+                  this.dom = (function(){
+                      let temp = document.createElement('div');
+                      temp.innerHTML = domString;
+                      return temp.children[0];
+                  })();
+              }
+              onAction(){
+                  let dom = this.dom.classList.contains('cd-popup') ? this.dom : this.dom.querySelector('.cd-popup');
       
+                  dom.addEventListener('click', function(event){
+                      if( event.target.classList.contains('cd-popup-close') || event.target.classList.contains('cd-popup') ){
+                          event.preventDefault();
+                          this.classList.remove('is-visible');
+                      }
+                  });    
+      
+                  document.onkeydown = function(event){
+                      if( event.which === 27 ){
+                          document.querySelector('.cd-popup').classList.remove('is-visible');
+                      }
+                  }  
+              }
+              show(result){
+                  let scoreBoard = document.querySelector('.cd-popup');
+                  scoreBoard.querySelector('.cd-popup-content').innerText = `恭喜你:${this.name}，你获得了${result}`;
+                  scoreBoard.classList.add('is-visible');
+              }
+          }
           // 答题区域的对象
           class AnswerBoard{
-              constructor(test){
+              constructor(test, name, number){
                   this.test = test;
+                  this.layer = new Layer(name, number);
               }
               info(){
-                  this.result = 0;
-                  for(let i of this.test){
-                      this.result += i.score;
+                  let _this = this;
+      
+                  _this.result = 0;
+                  for(let i of _this.test){
+                      if(Array.isArray(i)){
+                          for(let j of i){
+                              _this.result += j.score;
+                          }
+                      }else{
+                          _this.result += i.score;
+                      }
                   }
-                  alert(`你获得了${this.result}分`);
+                  
+                  _this.layer.show(_this.result);
               }
           }
       
           // 每一道题目的对象
           class Item{
-              constructor(item){
+              constructor(item, type){
                   this.id = item.id;
-                  this.type = item.type;
+                  this.type = type;
                   this.name = item.name;
                   this.choice = item.choice;
                   this.answer = item.answer;
@@ -146,20 +228,35 @@
           class Test{
               constructor(options){
                   this.el = options.el
-                  this.name = options.name || '暂未名命'
-                  this.items = [];
+                  this.name = options.name;
+                  this.number = options.number;
+                  // 单选
+                  this.sigleitems = [];
+                  // 多选
+                  this.mutilitems = [];
                   this.titleClass = 'contenttitle';
+                  this.cateClass = 'catecontainer';
+                  this.cateTitleClass = 'catetitle';
                   this.buttonClass = 'contentbutton';
                   // 初始化题目
                   this.init(options.data);
                   // 初始化答题板
-                  this.answerBoard = new AnswerBoard(this.items);         
+                  this.answerBoard = new AnswerBoard([this.sigleitems, this.mutilitems], this.name, this.number);         
                   // 渲染dom并且监听事件
                   this.update();
               }
               init(itemPool){
-                  for(let item of itemPool){
-                      this.items.push(new Item(item));
+                  let _this = this;
+                  for(let i of itemPool){
+                      if(i.type === 'sigle'){
+                          for(let item of i.items){
+                              _this.sigleitems.push(new Item(item, 'sigle'));
+                          }
+                      }else if(i.type === 'mutil'){
+                          for(let item of i.items){
+                              _this.mutilitems.push(new Item(item, 'mutil'));
+                          }
+                      }
                   }
               }
               update(){
@@ -172,10 +269,31 @@
                       title.innerHTML = `<p>${_this.name}</p>`;
                       return title;
                   })());
-                  for(let i of _this.items){
+                  // 渲染单选题
+                  board.appendChild((function(){
+                      let temp = document.createElement('div');
+                      temp.classList.add(_this.cateClass);
+                      // 渲染标题
+                      temp.innerHTML = `<div class=${_this.cateTitleClass}><p>单选题</p></div>`;
                       // 渲染题目以及答案组
-                      board.appendChild(i.update());
-                  }
+                      for(let i of _this.sigleitems){
+                          temp.appendChild(i.update());
+                      }
+                      return temp;
+                  })());
+                  
+                  // 渲染多选题
+                  board.appendChild((function(){
+                      let temp = document.createElement('div');
+                      temp.classList.add(_this.cateClass);
+                      // 渲染标题
+                      temp.innerHTML = `<div class=${_this.cateTitleClass}><p>多选题</p></div>`;
+                      // 渲染题目以及答案组
+                      for(let i of _this.mutilitems){
+                          temp.appendChild(i.update());
+                      }
+                      return temp;
+                  })());
                   // 渲染按钮组
                   board.appendChild((function(){
                       let temp = document.createElement('div');
@@ -188,17 +306,17 @@
                       temp.appendChild(confirm)
                       return temp;
                   })());
+      
+                  // 渲染结果弹出信息
+                  board.appendChild(_this.answerBoard.layer.dom);
               }
               confirm(){
                   this.answerBoard.info();
               }
           }
       
-          let test = new Test({
-              el: '.container',
-              name: '这是一个调查问卷',
-              data: itemPool
-          });
+          // 启动应用
+          run(Test);
       }
     </script>
   </body>
