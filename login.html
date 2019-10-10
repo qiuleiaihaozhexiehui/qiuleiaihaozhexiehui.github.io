@@ -28,7 +28,7 @@
           for(let [key, value] of param){
               temp.push(`${key}=${value}`);
           }
-          return [baseurl, '?', temp.join('&')].join('');
+          return encodeURI([baseurl, '?', temp.join('&')].join(''));
       }
       window.onload = function(){
           document.querySelector('*[data-form-role]').addEventListener('submit', function(event){
