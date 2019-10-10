@@ -30,8 +30,8 @@
           })
       };
       let run = async function(Test){
-          let number = getQueryVariable('number') || (window.location.href='/dist/login.html');
-          let name = getQueryVariable('name') || (window.location.href='/dist/login.html');
+          let number = getQueryVariable('number') || (window.location.href='login.html');
+          let name = getQueryVariable('name') || (window.location.href='login.html');
           let timuData = await getData();
           
           let test = new Test({
