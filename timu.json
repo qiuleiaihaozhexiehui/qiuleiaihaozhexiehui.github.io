@@ -1,15 +1,32 @@
 [
     {
-        "type": "sigle",
-        "items": [
-            {"id":1, "name":"题目一", "choice":{"A":"答案一", "B":"答案二", "C":"答案三", "D":"答案四"}, "answer":"A"},
-            {"id":2, "name":"题目二", "choice":{"A":"答案一", "B":"答案二", "C":"答案三", "D":"答案四"}, "answer":"B"}
+        "name": "level1",
+        "data": [
+            {
+                "type": "sigle",
+                "items": [
+                    {"id":1, "name":"题目一", "choice":{"A":"答案一", "B":"答案二", "C":"答案三", "D":"答案四"}, "answer":"A"},
+                    {"id":2, "name":"题目二", "choice":{"A":"答案一", "B":"答案二", "C":"答案三", "D":"答案四"}, "answer":"B"}
+                ]
+            },
+            {
+                "type": "mutil",
+                "items": [
+                    {"id":1, "name":"题目一", "choice":{"A": "答案一", "B": "答案二", "C": "答案三"}, "answer":["A", "B"]}
+                ]
+            }
         ]
     },
     {
-        "type": "mutil",
-        "items": [
-            {"id":1, "name":"题目一", "choice":{"A": "答案一", "B": "答案二", "C": "答案三"}, "answer":["A", "B"]}
+        "name": "level2",
+        "data": [
+            {
+                "type": "sigle",
+                "items": [
+                    {"id":1, "name":"题目一", "choice":{"A":"答案一", "B":"答案二", "C":"答案三", "D":"答案四"}, "answer":"A"},
+                    {"id":2, "name":"题目二", "choice":{"A":"答案一", "B":"答案二", "C":"答案三", "D":"答案四"}, "answer":"B"}
+                ]
+            }
         ]
     }
 ]
