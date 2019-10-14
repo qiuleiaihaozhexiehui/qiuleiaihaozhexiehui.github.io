@@ -80,7 +80,7 @@
               }, false)
           }
           validate(){
-              var reg = /^\d{11}$/;
+              var reg = /^\d{9,14}$/;
               if(!reg.test(this.paramnumber)){
                   this.number.classList.add('g-error');
                   return false;
