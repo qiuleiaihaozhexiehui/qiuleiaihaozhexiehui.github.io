@@ -30,11 +30,8 @@
       // 答题展示的弹窗
       class Layer{
           constructor(content, call, main, name, number){
-              this.main = main;
-              this.name = name;
               this.call = call;
               this.content = content;
-              this.number = number;
               this.initDom();
               this.onAction();  
           }
@@ -118,6 +115,27 @@
               }
               return _this.result;
           }
+          showError(){
+              let _this = this;
+      
+              for(let i of _this.test){
+                  // 多种题型
+                  if(Array.isArray(i)){
+                      for(let j of i){
+                          j.hideError();
+                          if(j.score < 5){
+                              j.showError();
+                          }
+                      }
+                  // 一种题型
+                  }else{
+                      j.hideError();
+                      if(j.score < 5){
+                          j.showError();
+                      }
+                  }
+              }
+          }
       }
       // 每一道题目的对象
       class Item{
@@ -129,7 +147,7 @@
               this.answer = item.answer;
               this.score = 0;
       
-              this.panelId = `panel-${this.id}`;
+              this.panelId = `panel-${this.type}-${this.id}`;
               this.panelClass = 'panelcontainer';
               this.panelInfoClass = 'panelinfo';
               this.panelResClass = 'panelres';
@@ -227,6 +245,14 @@
                   _this.score = 0;
               }
           }
+          hideError() {
+              let dom = document.querySelector(`#${this.panelId}`).querySelector(`.${this.panelInfoClass}`);
+              dom.classList.remove('panelerror');
+          }
+          showError(){
+              let dom = document.querySelector(`#${this.panelId}`).querySelector(`.${this.panelInfoClass}`);
+              dom.classList.add('panelerror');
+          }
       }
       // 题库的对象
       class Test{
@@ -252,7 +278,7 @@
           }
           // 弹出层
           bindLayer(content, call){
-              this.layer = new Layer(content, call, this.main, this.name, this.number);
+              this.layer = new Layer(content, call);
           }
           init(itemPool){
               let _this = this;
@@ -270,7 +296,13 @@
           }
           handle() {
               // 在执行之前先调用一下pre的钩子
-              this.fire('pre');
+              // this.fire('pre');
+              this.bindLayer(_ => {
+                  return `<div>姓名：${this.name}</div>
+                          <div>姓名：${this.number}</div>
+                          <div>分数：${this.answerBoard.result}</div>`;
+              }, -1);
+              this.update();
           }
           update(){
               let _this = this;
@@ -332,6 +364,7 @@
           }
           confirm(){
               this.layer.show(this.answerBoard.info());
+              this.answerBoard.showError();
           }
           register(name, fn){
               // 当消息不存在时，创建一个该消息类型，将回调函数推入执行队列中
@@ -364,6 +397,71 @@
               }
           }
       }
+      // 题库分类
+      class TestCate{
+          constructor(options){
+              this.data = (_ => {
+                  let [ ...data ] = options.data || [];
+                  delete options.data;
+                  return data;
+              })();
+      
+              this.options = Object.assign({
+                  el: '.container',
+                  name: '未指定',
+                  number: '未指定'
+              }, options)
+      
+              this.cateClass = 'cateall';
+              this.queueClass = 'catequeue';
+              this.itemClass = 'cateitem';
+      
+              this.init();
+          }
+          // 视图层
+          view() {
+              var domArray = [];
+              var [ ...keys ] = this.testPool.keys(),
+                  length = keys.length,
+                  per = 3,
+                  page = Math.ceil(length / 3);
+              let _this = this;
+              for(let index=0; index<page; index++){
+                  let temp = (_ => {
+                      let start = index * per,
+                          end = start+per,
+                          strArray = [];
+                      for(;start<end && start<length;start++){
+                          strArray.push(`<div data-name='${keys[start]}' class='${_this.itemClass}'>${keys[start]}</div>`);
+                      }
+                      return strArray.join('');
+                  })();
+                  let rowstring = `<div class='${_this.queueClass}'>${temp}</div>`;
+                  domArray.push(rowstring);
+              }
+              document.querySelector(this.options.el).innerHTML = `<div class='${this.cateClass}'>${domArray.join('')}</div>`;
+          }
+          controller(){
+              let _this = this;
+              var dom = document.querySelectorAll('*[data-name]');
+              for(let item of dom){
+                  item.addEventListener('click', function(){
+                      _this.testPool.get(this.getAttribute('data-name')).handle();
+                  }, false);
+              }
+          }
+          init(){
+              this.testPool = new Map();
+              for(let i of this.data){
+                  let options = Object.assign(this.options, {data: i.data});
+                  this.testPool.set(i.name, new Test(options));
+              }
+          }
+          run(){
+              this.view();
+              this.controller();
+          }
+      }
     </script>
     <!-- 题库相关类-->
     <!-- 视频相关类-->
@@ -393,18 +491,20 @@
                   }
                   _this.play = !_this.play;
               });
+              /*
               video.addEventListener('canplay', function () {
                   // 开始视频全屏
                   document.querySelector(_this.el).classList.add('fullScreen');
                   _this.requestFullScreen();
                   video.play();
               });
+              */
               video.addEventListener("ended", function () {
                   // localStorage.setItem("watched", true);
                   this.setAttribute('style', 'display:none');
                   // 退出视频全屏
-                  document.querySelector(_this.el).classList.remove('fullScreen');
-                  _this.exitFullscreen();
+                  // document.querySelector(_this.el).classList.remove('fullScreen');
+                  // _this.exitFullscreen();
       
                   _this.callable();
               });
@@ -438,15 +538,30 @@
     <!-- 视频相关类-->
     <!-- 主体-->
     <script>
-      let start = async function(number, name){
-          let [data1, data2] = await (_ => {
+      var start = async function(number, name){
+          var data = await (_ => {
               return new Promise((resolve, reject) => {
                   fetch('/timu.json')
                   .then(res => resolve(res.json()))
                   .catch(err => console.log(err));
               });
           })();
+          var testCate = new TestCate({
+              el: '.container',
+              number: number,
+              name: name,
+              data: data
+          });
+          if(!sessionStorage.getItem('iswatch')){
+              var video = new Video('.videocontainer', 'intro.mp4', '快速安利', function(){
+                  sessionStorage.setItem('iswatch', true);
+                  testCate.run();
+              });
+          }else{
+              testCate.run();
+          }
           
+          /*
           let level1 = new Test({
               el: '.container',
               number: number,
@@ -492,10 +607,11 @@
           });
       
           level1.handle();
+          */
       }
       window.onload = function(){
-          let number = getQueryVariable('number') || (window.location.href='/');
-          let name = getQueryVariable('name') || (window.location.href='/');
+          let number = getQueryVariable('number') || (window.location.href='login.html');
+          let name = getQueryVariable('name') || (window.location.href='login.html');
           start(number, name);
       }
     </script>
