@@ -1,572 +1,579 @@
 <!DOCTYPE html>
-html(lang="en")
-    head
-        meta(charset="UTF-8")
-        meta(name="viewport", content="width=device-width, initial-scale=1.0")
-        meta(http-equiv="X-UA-Compatible", content="ie=edge")
-        title 测试题
-        link(rel='stylesheet',href='timu.css')
-    body
-        div.videocontainer
-        div.container
-        // 工具函数
-        script.
-            let getQueryVariable = function(variable){
-                let href = decodeURI(window.location.search);
-                var query = href.substring(1);
-                var vars = query.split("&");
-                for (var i=0;i<vars.length;i++) {
-                        var pair = vars[i].split("=");
-                        if(pair[0] == variable){return pair[1];}
-                }
-                return(false);
-            }
-            let setAttr = function(el, attrs) {
-                for(var key in attrs) {
-                    el.setAttribute(key, attrs[key]);
-                }
-            }
-            // 答题展示的弹窗
-            class Layer{
-                constructor(content, call){
-                    this.call = call;
-                    this.content = content;
-                    this.initDom();
-                    this.onAction();  
-                }
-                initDom(){
-                    let domString = `
-                        <div class="cd-popup" role="alert">
-                            <div class="cd-popup-container">
-                                <p class="cd-popup-content"></p>
-                                <a class="cd-popup-close img-replace" href="#0">Close</a>
-                            </div>
-                        </div>`;
-                    this.dom = (function(){
-                        let temp = document.createElement('div');
-                        temp.innerHTML = domString;
-                        return temp.children[0];
-                    })();
-                }
-                onAction(){
-                    let _this = this;
-                    let dom = _this.dom.classList.contains('cd-popup') ? this.dom : this.dom.querySelector('.cd-popup');
-
-                    dom.addEventListener('click', function(event){
-                        if( event.target.classList.contains('cd-popup-close') || event.target.classList.contains('cd-popup') ){
-                            event.preventDefault();
-                            this.classList.remove('is-visible');
-                        }
-                    });    
-
-                    document.onkeydown = function(event){
-                        if( event.which === 27 ){
-                            document.querySelector('.cd-popup').classList.remove('is-visible');
-                        }
-                    }  
-                }
-                show(){
-                    let _this = this;
-                    //- let scoreBoard = document.querySelector('.cd-popup');
-                    let scoreBoard = this.dom;
-                    scoreBoard.querySelector('.cd-popup-content').innerHTML = _this.content() || '默认值';
-                    scoreBoard.classList.add('is-visible');
-
-                    if (typeof _this.call === 'number'){
-                        if (_this.call !== -1){
-                            setTimeout(function(){
-                                scoreBoard.classList.remove('is-visible');
-                            }, _this.call)
-                        }
-                    }else if (typeof _this.call === 'function'){
-                        setTimeout(function(){
-                            scoreBoard.classList.remove('is-visible');
-                            _this.call();
-                        }, 2000)
-                    }
-                }
-            }
-        // 工具函数
-        // 题库相关类
-        script.
-            // 答题区域的对象
-            class AnswerBoard{
-                constructor(main, test, name, number){
-                    this.main = main;
-                    this.name = name;
-                    this.number = number;
-                    this.test = test;
-                }
-                info(){
-                    let _this = this;
-
-                    _this.result = 0;
-                    for(let i of _this.test){
-                        if(Array.isArray(i)){
-                            for(let j of i){
-                                _this.result += j.score;
-                            }
-                        }else{
-                            _this.result += i.score;
-                        }
-                    }
-                    return _this.result;
-                }
-                showError(){
-                    let _this = this;
-
-                    for(let i of _this.test){
-                        // 多种题型
-                        if(Array.isArray(i)){
-                            for(let j of i){
-                                j.hideError();
-                                if(j.score < 5){
-                                    j.showError();
-                                }
-                            }
-                        // 一种题型
-                        }else{
-                            j.hideError();
-                            if(j.score < 5){
-                                j.showError();
-                            }
-                        }
-                    }
-                }
-            }
-            // 每一道题目的对象
-            class Item{
-                constructor(item, type){
-                    this.id = item.id;
-                    this.type = type;
-                    this.name = item.name;
-                    this.choice = item.choice;
-                    this.answer = item.answer;
-                    this.score = 0;
-
-                    this.panelId = `panel-${this.type}-${this.id}`;
-                    this.panelClass = 'panelcontainer';
-                    this.panelInfoClass = 'panelinfo';
-                    this.panelResClass = 'panelres';
-                    this.itemClass = 'panelitem'
-                }
-                update(){
-                    let _this = this;
-
-                    let itemContainer = document.createElement('div');
-                    itemContainer.setAttribute('id', _this.panelId);
-                    itemContainer.classList.add(_this.panelClass);
-
-                    let answerGroup = document.createElement('div');
-                    answerGroup.classList.add(_this.panelResClass);
-                    answerGroup.innerHTML = (function(){
-                        let temp = [];
-                        let type = _this.type === 'sigle' ? 'radio' : 'checkbox';
-                        for(let key in _this.choice){
-                            temp.push(`<div class='${_this.itemClass}'><input type='${type}' name='${_this.id}' value='${key}' />${key}、${_this.choice[key]}</div>`);
-                        }
-                        return temp.join('');
-                    })();
-                    answerGroup.addEventListener('click', this.onClick.bind(this, answerGroup));
-
-                    // 渲染题目信息
-                    itemContainer.appendChild((function(){
-                        let temp = document.createElement('div');
-                        temp.classList.add(_this.panelInfoClass);
-                        temp.innerHTML = `${_this.id}、${_this.name}`;
-                        return temp;
-                    })());
-                    // 渲染答案组
-                    itemContainer.appendChild(answerGroup);
-                    return itemContainer;
-                }
-                onClick(e){
-                    let _this = this;                        
-                    let group = e.querySelectorAll(`input[name='${_this.id}']`);
-
-                    // 根据不同的题目类型进行分数计算
-                    if (_this.type === 'sigle'){
-                        _this.countScoreSigle(group);
-                    }else if(_this.type === 'mutil'){
-                        _this.countScoreMutil(group);
-                    }
-                }
-                countScoreSigle(group){
-                    let _this = this;
-                    for (let i = 0; i < group.length; i++) { //遍历Radio 
-                        if (group[i].checked && group[i].value === _this.answer) {
-                            this.score = 5;
-                            return;                
-                        }
-                    }
-                    // 如果没有选择对，那么就结果为false
-                    this.score = 0;
-                }
-                countScoreMutil(group){
-                    let _this = this;
-                    // 获取标准答案
-                    let result = typeof _this.answer === 'string' ? [_this.answer] : _this.answer;
-                    // 获取有哪些选项
-                    let selected = [];
-                    for (let i = 0; i < group.length; i++) { //遍历Radio 
-                        if (group[i].checked) {
-                            selected.push(group[i].value);               
-                        }
-                    }
-                    let judge = function(A, B){
-                        for (var elem of B) {
-                            if (A.indexOf(elem) === -1) {
-                                return false;
-                            }
-                        }
-                        return true;
-                    }
-                    // 多选不得分
-                    if(selected.length > result.length && judge(selected, result)){
-                        _this.score = 0;
-                    }
-                    // 选错一个不得分
-                    // else if(judge(result, selected)){
-                    //    _this.score = 0;
-                    // }
-                    // 少选得三分
-                    else if(selected.length < result.length && judge(result, selected)){
-                        // 少选
-                        _this.score = 3;
-                    }                        
-                    // 刚好得五分
-                    else if(selected.length == result.length && judge(result, selected)){
-                        _this.score = 5;
-                    }
-                    else{
-                        _this.score = 0;
-                    }
-                }
-                hideError() {
-                    let dom = document.querySelector(`#${this.panelId}`).querySelector(`.${this.panelInfoClass}`);
-                    dom.classList.remove('panelerror');
-                }
-                showError(){
-                    let dom = document.querySelector(`#${this.panelId}`).querySelector(`.${this.panelInfoClass}`);
-                    dom.classList.add('panelerror');
-                }
-            }
-            // 题库的对象
-            class Test{
-                constructor(options){
-                    this.el = options.el
-                    this.name = options.name;
-                    this.number = options.number;
-                    this.cate = options.cate;
-                    // 单选
-                    this.sigleitems = [];
-                    // 多选
-                    this.mutilitems = [];
-                    this.titleClass = 'contenttitle';
-                    this.cateClass = 'catecontainer';
-                    this.cateTitleClass = 'catetitle';
-                    this.buttonClass = 'contentbutton';
-                    // 初始化题目
-                    this.init(options.data);
-                    // 初始化答题板
-                    this.answerBoard = new AnswerBoard(this, [this.sigleitems, this.mutilitems], this.name, this.number);   
-
-                    // 初始化下一关的对象，发布/订阅模式
-                    this.message = new Map(); 
-                }
-                // 弹出层
-                bindLayer(content, call){
-                    this.layer = new Layer(content, call);
-                }
-                init(itemPool){
-                    let _this = this;
-                    for(let i of itemPool){
-                        if(i.type === 'sigle'){
-                            for(let item of i.items){
-                                _this.sigleitems.push(new Item(item, 'sigle'));
-                            }
-                        }else if(i.type === 'mutil'){
-                            for(let item of i.items){
-                                _this.mutilitems.push(new Item(item, 'mutil'));
-                            }
-                        }
-                    }
-                }
-                handle() {
-                    // 在执行之前先调用一下pre的钩子
-                    // this.fire('pre');
-                    this.bindLayer(_ => {
-                        return `<div>题目分类：${this.cate}</div>
-                                <div>姓名：${this.name}</div>
-                                <div>姓名：${this.number}</div>
-                                <div>分数：${this.answerBoard.result}</div>`;
-                    }, -1);
-                    this.update();
-                }
-                update(){
-                    let _this = this;
-                    let board = document.querySelector(_this.el);
-                    // 保证为空
-                    board.innerHTML = '';
-                    // 渲染文章标题
-                    board.appendChild((function(){
-                        let title = document.createElement('div');
-                        title.classList.add(_this.titleClass);
-                        title.innerHTML = `<p>${_this.name}</p>`;
-                        return title;
-                    })());
-                    // 渲染单选题
-                    if(_this.sigleitems.length > 0){
-                        board.appendChild((function(){
-                            let temp = document.createElement('div');
-                            temp.classList.add(_this.cateClass);
-                            // 渲染标题
-                            temp.innerHTML = `<div class=${_this.cateTitleClass}><p>单选题</p></div>`;
-                            // 渲染题目以及答案组
-                            for(let i of _this.sigleitems){
-                                temp.appendChild(i.update());
-                            }
-                            return temp;
-                        })());
-                    }
-                    
-                    // 渲染多选题
-                    if(_this.mutilitems.length > 0){
-                        board.appendChild((function(){
-                            let temp = document.createElement('div');
-                            temp.classList.add(_this.cateClass);
-                            // 渲染标题
-                            temp.innerHTML = `<div class=${_this.cateTitleClass}><p>多选题</p></div>`;
-                            // 渲染题目以及答案组
-                            for(let i of _this.mutilitems){
-                                temp.appendChild(i.update());
-                            }
-                            return temp;
-                        })());
-                    }
-                    
-                    // 渲染按钮组
-                    board.appendChild((function(){
-                        let temp = document.createElement('div');
-                        temp.classList.add(_this.buttonClass);
-
-                        let confirm = document.createElement('button');
-                        confirm.innerText = '提交';
-                        confirm.addEventListener('click', _this.confirm.bind(_this));
-
-                        temp.appendChild(confirm)
-                        return temp;
-                    })());
-
-                    // 渲染结果弹出信息
-                    board.appendChild(_this.layer.dom);
-                }
-                confirm(){
-                    this.layer.show(this.answerBoard.info());
-                    this.answerBoard.showError();
-                }
-                register(name, fn){
-                    // 当消息不存在时，创建一个该消息类型，将回调函数推入执行队列中
-                    if (typeof this.message.get(name) === 'undefined') {
-                        this.message.set(name, [fn]);
-                    } else {
-                        // 消息类型存在时，将回调函数推入执行队列中
-                        this.message.get(name).push(fn);
-                    }
-                }
-                // 发布消息接口
-                fire(name, args) {
-                    // 当消息不存在时直接返回
-                    if (!this.message.get(name)) 
-                        return
-
-                    args = args || {}
-                    // 依次执行消息对应的动作队列
-                    for (var i = 0, len = this.message.get(name).length; i < len; i++) {
-                        this.message.get(name)[i].call(this, args)
-                    }
-                }
-                // 移除消息接口
-                remove(name, fn) {
-                    if (this.message.get(name) instanceof Array) {
-                        // 从后面开始遍历，如果存在该动作则将其移除
-                        for (var i = this.message.get(name).length - 1; i >= 0; i--) {
-                            this.message.get(name)[i] === fn && this.message.get(name).splice(i, 1)
-                        }
-                    }
-                }
-            }
-            // 题库分类
-            class TestCate{
-                constructor(options){
-                    this.data = (_ => {
-                        let [ ...data ] = options.data || [];
-                        delete options.data;
-                        return data;
-                    })();
-
-                    this.options = Object.assign({
-                        el: '.container',
-                        name: '未指定',
-                        number: '未指定'
-                    }, options)
-
-                    this.cateClass = 'cateall';
-                    this.queueClass = 'catequeue';
-                    this.itemClass = 'cateitem';
-
-                    this.init();
-                }
-                // 视图层
-                view() {
-                    var domArray = [];
-                    var [ ...keys ] = this.testPool.keys(),
-                        length = keys.length,
-                        per = 3,
-                        page = Math.ceil(length / 3);
-                    let _this = this;
-                    for(let index=0; index<page; index++){
-                        let temp = (_ => {
-                            let start = index * per,
-                                end = start+per,
-                                strArray = [];
-                            for(;start<end && start<length;start++){
-                                strArray.push(`<div data-name='${keys[start]}' class='${_this.itemClass}'>${keys[start]}</div>`);
-                            }
-                            return strArray.join('');
-                        })();
-                        let rowstring = `<div class='${_this.queueClass}'>${temp}</div>`;
-                        domArray.push(rowstring);
-                    }
-                    document.querySelector(this.options.el).innerHTML = `<div class='${this.cateClass}'>${domArray.join('')}</div>`;
-                }
-                controller(){
-                    let _this = this;
-                    var dom = document.querySelectorAll('*[data-name]');
-                    for(let item of dom){
-                        item.addEventListener('click', function(){
-                            _this.testPool.get(this.getAttribute('data-name')).handle();
-                        }, false);
-                    }
-                }
-                init(){
-                    this.testPool = new Map();
-                    for(let i of this.data){
-                        let options = Object.assign(this.options, {data: i.data, cate:i.name});
-                        this.testPool.set(i.name, new Test(options));
-                    }
-                }
-                run(){
-                    this.view();
-                    this.controller();
-                }
-            }
-        // 题库相关类
-        // 视频相关类
-        script.
-            class Video{
-                constructor(el, url, name, callable){
-                    this.url = url;
-                    this.name = name;
-                    this.el = el;
-                    this.ended = false;
-                    this.play = false;
-                    this.full = false;
-                    this.callable = callable;
-
-                    this.update();
-                }
-                update(){
-                    let _this = this;
-                    let container = document.createElement('div');
-                    let video = document.createElement('video');
-                    setAttr(video, {src:this.url, autoplay:'true'});
-                    video.addEventListener('click', function () {
-                        if(!_this.play){
-                            video.play();
-                        }else{
-                            video.pause();
-                        }
-                        _this.play = !_this.play;
-                    });
-                    /*
-                    video.addEventListener('canplay', function () {
-                        // 开始视频全屏
-                        document.querySelector(_this.el).classList.add('fullScreen');
-                        _this.requestFullScreen();
-                        video.play();
-                    });
-                    */
-                    video.addEventListener("ended", function () {
-                        // localStorage.setItem("watched", true);
-                        this.setAttribute('style', 'display:none');
-                        // 退出视频全屏
-                        // document.querySelector(_this.el).classList.remove('fullScreen');
-                        // _this.exitFullscreen();
-
-                        _this.callable();
-                    });
-
-                    container.appendChild(video);
-                    document.querySelector(this.el).appendChild(container);
-                }
-                requestFullScreen(){ 
-                    var de = document.documentElement; 
-                    if (de.requestFullscreen) { 
-                        de.requestFullscreen(); 
-                    } else if (de.mozRequestFullScreen) { 
-                        de.mozRequestFullScreen(); 
-                    } else if (de.webkitRequestFullScreen) { 
-                        de.webkitRequestFullScreen(); 
-                    } 
-                }
-
-                exitFullscreen() { 
-                    var de = document; 
-                    if (de.exitFullscreen) { 
-                        de.exitFullscreen(); 
-                    } else if (de.mozCancelFullScreen) { 
-                        de.mozCancelFullScreen(); 
-                    } else if (de.webkitCancelFullScreen) { 
-                        de.webkitCancelFullScreen(); 
-                    } 
-                }
-            }
-        // 视频相关类
-        // 主体
-        script.
-            var start = async function(number, name){
-                var data = await (_ => {
-                    return new Promise((resolve, reject) => {
-                        fetch('/timu.json')
-                        .then(res => resolve(res.json()))
-                        .catch(err => console.log(err));
-                    });
-                })();
-                var testCate = new TestCate({
-                    el: '.container',
-                    number: number,
-                    name: name,
-                    data: data
-                });
-                if(!sessionStorage.getItem('iswatch')){
-                    var layer = new Layer(_ => {
-                        return '接下来的视频会有所帮助';
-                    }, _ => {
-                        var video = new Video('.videocontainer', 'intro.mp4', '快速安利', function(){
-                            sessionStorage.setItem('iswatch', true);
-                            testCate.run();
-                        });
-                    });
-                    document.body.appendChild(layer.dom);
-                    layer.show();
-                }else{
-                    testCate.run();
-                }
-            }
-            window.onload = function(){
-                let number = getQueryVariable('number') || (window.location.href='login.html');
-                let name = getQueryVariable('name') || (window.location.href='login.html');
-                start(number, name);
-            }
-        // 主体
+<html lang="en">
+  <head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+    <title>测试题</title>
+    <link rel="stylesheet" href="timu.css"/>
+  </head>
+  <body>
+    <div class="videocontainer"></div>
+    <div class="container"></div>
+    <!-- 工具函数-->
+    <script>
+      let getQueryVariable = function(variable){
+          let href = decodeURI(window.location.search);
+          var query = href.substring(1);
+          var vars = query.split("&");
+          for (var i=0;i<vars.length;i++) {
+                  var pair = vars[i].split("=");
+                  if(pair[0] == variable){return pair[1];}
+          }
+          return(false);
+      }
+      let setAttr = function(el, attrs) {
+          for(var key in attrs) {
+              el.setAttribute(key, attrs[key]);
+          }
+      }
+      // 答题展示的弹窗
+      class Layer{
+          constructor(content, call){
+              this.call = call;
+              this.content = content;
+              this.initDom();
+              this.onAction();  
+          }
+          initDom(){
+              let domString = `
+                  <div class="cd-popup" role="alert">
+                      <div class="cd-popup-container">
+                          <p class="cd-popup-content"></p>
+                          <a class="cd-popup-close img-replace" href="#0">Close</a>
+                      </div>
+                  </div>`;
+              this.dom = (function(){
+                  let temp = document.createElement('div');
+                  temp.innerHTML = domString;
+                  return temp.children[0];
+              })();
+          }
+          onAction(){
+              let _this = this;
+              let dom = _this.dom.classList.contains('cd-popup') ? this.dom : this.dom.querySelector('.cd-popup');
+      
+              dom.addEventListener('click', function(event){
+                  if( event.target.classList.contains('cd-popup-close') || event.target.classList.contains('cd-popup') ){
+                      event.preventDefault();
+                      this.classList.remove('is-visible');
+                  }
+              });    
+      
+              document.onkeydown = function(event){
+                  if( event.which === 27 ){
+                      document.querySelector('.cd-popup').classList.remove('is-visible');
+                  }
+              }  
+          }
+          show(){
+              let _this = this;
+              //- let scoreBoard = document.querySelector('.cd-popup');
+              let scoreBoard = this.dom;
+              scoreBoard.querySelector('.cd-popup-content').innerHTML = _this.content() || '默认值';
+              scoreBoard.classList.add('is-visible');
+      
+              if (typeof _this.call === 'number'){
+                  if (_this.call !== -1){
+                      setTimeout(function(){
+                          scoreBoard.classList.remove('is-visible');
+                      }, _this.call)
+                  }
+              }else if (typeof _this.call === 'function'){
+                  setTimeout(function(){
+                      scoreBoard.classList.remove('is-visible');
+                      _this.call();
+                  }, 2000)
+              }
+          }
+      }
+    </script>
+    <!-- 工具函数-->
+    <!-- 题库相关类-->
+    <script>
+      // 答题区域的对象
+      class AnswerBoard{
+          constructor(main, test, name, number){
+              this.main = main;
+              this.name = name;
+              this.number = number;
+              this.test = test;
+          }
+          info(){
+              let _this = this;
+      
+              _this.result = 0;
+              for(let i of _this.test){
+                  if(Array.isArray(i)){
+                      for(let j of i){
+                          _this.result += j.score;
+                      }
+                  }else{
+                      _this.result += i.score;
+                  }
+              }
+              return _this.result;
+          }
+          showError(){
+              let _this = this;
+      
+              for(let i of _this.test){
+                  // 多种题型
+                  if(Array.isArray(i)){
+                      for(let j of i){
+                          j.hideError();
+                          if(j.score < 5){
+                              j.showError();
+                          }
+                      }
+                  // 一种题型
+                  }else{
+                      j.hideError();
+                      if(j.score < 5){
+                          j.showError();
+                      }
+                  }
+              }
+          }
+      }
+      // 每一道题目的对象
+      class Item{
+          constructor(item, type){
+              this.id = item.id;
+              this.type = type;
+              this.name = item.name;
+              this.choice = item.choice;
+              this.answer = item.answer;
+              this.score = 0;
+      
+              this.panelId = `panel-${this.type}-${this.id}`;
+              this.panelClass = 'panelcontainer';
+              this.panelInfoClass = 'panelinfo';
+              this.panelResClass = 'panelres';
+              this.itemClass = 'panelitem'
+          }
+          update(){
+              let _this = this;
+      
+              let itemContainer = document.createElement('div');
+              itemContainer.setAttribute('id', _this.panelId);
+              itemContainer.classList.add(_this.panelClass);
+      
+              let answerGroup = document.createElement('div');
+              answerGroup.classList.add(_this.panelResClass);
+              answerGroup.innerHTML = (function(){
+                  let temp = [];
+                  let type = _this.type === 'sigle' ? 'radio' : 'checkbox';
+                  for(let key in _this.choice){
+                      temp.push(`<div class='${_this.itemClass}'><input type='${type}' name='${_this.id}' value='${key}' />${key}、${_this.choice[key]}</div>`);
+                  }
+                  return temp.join('');
+              })();
+              answerGroup.addEventListener('click', this.onClick.bind(this, answerGroup));
+      
+              // 渲染题目信息
+              itemContainer.appendChild((function(){
+                  let temp = document.createElement('div');
+                  temp.classList.add(_this.panelInfoClass);
+                  temp.innerHTML = `${_this.id}、${_this.name}`;
+                  return temp;
+              })());
+              // 渲染答案组
+              itemContainer.appendChild(answerGroup);
+              return itemContainer;
+          }
+          onClick(e){
+              let _this = this;                        
+              let group = e.querySelectorAll(`input[name='${_this.id}']`);
+      
+              // 根据不同的题目类型进行分数计算
+              if (_this.type === 'sigle'){
+                  _this.countScoreSigle(group);
+              }else if(_this.type === 'mutil'){
+                  _this.countScoreMutil(group);
+              }
+          }
+          countScoreSigle(group){
+              let _this = this;
+              for (let i = 0; i < group.length; i++) { //遍历Radio 
+                  if (group[i].checked && group[i].value === _this.answer) {
+                      this.score = 5;
+                      return;                
+                  }
+              }
+              // 如果没有选择对，那么就结果为false
+              this.score = 0;
+          }
+          countScoreMutil(group){
+              let _this = this;
+              // 获取标准答案
+              let result = typeof _this.answer === 'string' ? [_this.answer] : _this.answer;
+              // 获取有哪些选项
+              let selected = [];
+              for (let i = 0; i < group.length; i++) { //遍历Radio 
+                  if (group[i].checked) {
+                      selected.push(group[i].value);               
+                  }
+              }
+              let judge = function(A, B){
+                  for (var elem of B) {
+                      if (A.indexOf(elem) === -1) {
+                          return false;
+                      }
+                  }
+                  return true;
+              }
+              // 多选不得分
+              if(selected.length > result.length && judge(selected, result)){
+                  _this.score = 0;
+              }
+              // 选错一个不得分
+              // else if(judge(result, selected)){
+              //    _this.score = 0;
+              // }
+              // 少选得三分
+              else if(selected.length < result.length && judge(result, selected)){
+                  // 少选
+                  _this.score = 3;
+              }                        
+              // 刚好得五分
+              else if(selected.length == result.length && judge(result, selected)){
+                  _this.score = 5;
+              }
+              else{
+                  _this.score = 0;
+              }
+          }
+          hideError() {
+              let dom = document.querySelector(`#${this.panelId}`).querySelector(`.${this.panelInfoClass}`);
+              dom.classList.remove('panelerror');
+          }
+          showError(){
+              let dom = document.querySelector(`#${this.panelId}`).querySelector(`.${this.panelInfoClass}`);
+              dom.classList.add('panelerror');
+          }
+      }
+      // 题库的对象
+      class Test{
+          constructor(options){
+              this.el = options.el
+              this.name = options.name;
+              this.number = options.number;
+              this.cate = options.cate;
+              // 单选
+              this.sigleitems = [];
+              // 多选
+              this.mutilitems = [];
+              this.titleClass = 'contenttitle';
+              this.cateClass = 'catecontainer';
+              this.cateTitleClass = 'catetitle';
+              this.buttonClass = 'contentbutton';
+              // 初始化题目
+              this.init(options.data);
+              // 初始化答题板
+              this.answerBoard = new AnswerBoard(this, [this.sigleitems, this.mutilitems], this.name, this.number);   
+      
+              // 初始化下一关的对象，发布/订阅模式
+              this.message = new Map(); 
+          }
+          // 弹出层
+          bindLayer(content, call){
+              this.layer = new Layer(content, call);
+          }
+          init(itemPool){
+              let _this = this;
+              for(let i of itemPool){
+                  if(i.type === 'sigle'){
+                      for(let item of i.items){
+                          _this.sigleitems.push(new Item(item, 'sigle'));
+                      }
+                  }else if(i.type === 'mutil'){
+                      for(let item of i.items){
+                          _this.mutilitems.push(new Item(item, 'mutil'));
+                      }
+                  }
+              }
+          }
+          handle() {
+              // 在执行之前先调用一下pre的钩子
+              // this.fire('pre');
+              this.bindLayer(_ => {
+                  return `<div>题目分类：${this.cate}</div>
+                          <div>姓名：${this.name}</div>
+                          <div>姓名：${this.number}</div>
+                          <div>分数：${this.answerBoard.result}</div>`;
+              }, -1);
+              this.update();
+          }
+          update(){
+              let _this = this;
+              let board = document.querySelector(_this.el);
+              // 保证为空
+              board.innerHTML = '';
+              // 渲染文章标题
+              board.appendChild((function(){
+                  let title = document.createElement('div');
+                  title.classList.add(_this.titleClass);
+                  title.innerHTML = `<p>${_this.name}</p>`;
+                  return title;
+              })());
+              // 渲染单选题
+              if(_this.sigleitems.length > 0){
+                  board.appendChild((function(){
+                      let temp = document.createElement('div');
+                      temp.classList.add(_this.cateClass);
+                      // 渲染标题
+                      temp.innerHTML = `<div class=${_this.cateTitleClass}><p>单选题</p></div>`;
+                      // 渲染题目以及答案组
+                      for(let i of _this.sigleitems){
+                          temp.appendChild(i.update());
+                      }
+                      return temp;
+                  })());
+              }
+              
+              // 渲染多选题
+              if(_this.mutilitems.length > 0){
+                  board.appendChild((function(){
+                      let temp = document.createElement('div');
+                      temp.classList.add(_this.cateClass);
+                      // 渲染标题
+                      temp.innerHTML = `<div class=${_this.cateTitleClass}><p>多选题</p></div>`;
+                      // 渲染题目以及答案组
+                      for(let i of _this.mutilitems){
+                          temp.appendChild(i.update());
+                      }
+                      return temp;
+                  })());
+              }
+              
+              // 渲染按钮组
+              board.appendChild((function(){
+                  let temp = document.createElement('div');
+                  temp.classList.add(_this.buttonClass);
+      
+                  let confirm = document.createElement('button');
+                  confirm.innerText = '提交';
+                  confirm.addEventListener('click', _this.confirm.bind(_this));
+      
+                  temp.appendChild(confirm)
+                  return temp;
+              })());
+      
+              // 渲染结果弹出信息
+              board.appendChild(_this.layer.dom);
+          }
+          confirm(){
+              this.layer.show(this.answerBoard.info());
+              this.answerBoard.showError();
+          }
+          register(name, fn){
+              // 当消息不存在时，创建一个该消息类型，将回调函数推入执行队列中
+              if (typeof this.message.get(name) === 'undefined') {
+                  this.message.set(name, [fn]);
+              } else {
+                  // 消息类型存在时，将回调函数推入执行队列中
+                  this.message.get(name).push(fn);
+              }
+          }
+          // 发布消息接口
+          fire(name, args) {
+              // 当消息不存在时直接返回
+              if (!this.message.get(name)) 
+                  return
+      
+              args = args || {}
+              // 依次执行消息对应的动作队列
+              for (var i = 0, len = this.message.get(name).length; i < len; i++) {
+                  this.message.get(name)[i].call(this, args)
+              }
+          }
+          // 移除消息接口
+          remove(name, fn) {
+              if (this.message.get(name) instanceof Array) {
+                  // 从后面开始遍历，如果存在该动作则将其移除
+                  for (var i = this.message.get(name).length - 1; i >= 0; i--) {
+                      this.message.get(name)[i] === fn && this.message.get(name).splice(i, 1)
+                  }
+              }
+          }
+      }
+      // 题库分类
+      class TestCate{
+          constructor(options){
+              this.data = (_ => {
+                  let [ ...data ] = options.data || [];
+                  delete options.data;
+                  return data;
+              })();
+      
+              this.options = Object.assign({
+                  el: '.container',
+                  name: '未指定',
+                  number: '未指定'
+              }, options)
+      
+              this.cateClass = 'cateall';
+              this.queueClass = 'catequeue';
+              this.itemClass = 'cateitem';
+      
+              this.init();
+          }
+          // 视图层
+          view() {
+              var domArray = [];
+              var [ ...keys ] = this.testPool.keys(),
+                  length = keys.length,
+                  per = 3,
+                  page = Math.ceil(length / 3);
+              let _this = this;
+              for(let index=0; index<page; index++){
+                  let temp = (_ => {
+                      let start = index * per,
+                          end = start+per,
+                          strArray = [];
+                      for(;start<end && start<length;start++){
+                          strArray.push(`<div data-name='${keys[start]}' class='${_this.itemClass}'>${keys[start]}</div>`);
+                      }
+                      return strArray.join('');
+                  })();
+                  let rowstring = `<div class='${_this.queueClass}'>${temp}</div>`;
+                  domArray.push(rowstring);
+              }
+              document.querySelector(this.options.el).innerHTML = `<div class='${this.cateClass}'>${domArray.join('')}</div>`;
+          }
+          controller(){
+              let _this = this;
+              var dom = document.querySelectorAll('*[data-name]');
+              for(let item of dom){
+                  item.addEventListener('click', function(){
+                      _this.testPool.get(this.getAttribute('data-name')).handle();
+                  }, false);
+              }
+          }
+          init(){
+              this.testPool = new Map();
+              for(let i of this.data){
+                  let options = Object.assign(this.options, {data: i.data, cate:i.name});
+                  this.testPool.set(i.name, new Test(options));
+              }
+          }
+          run(){
+              this.view();
+              this.controller();
+          }
+      }
+    </script>
+    <!-- 题库相关类-->
+    <!-- 视频相关类-->
+    <script>
+      class Video{
+          constructor(el, url, name, callable){
+              this.url = url;
+              this.name = name;
+              this.el = el;
+              this.ended = false;
+              this.play = false;
+              this.full = false;
+              this.callable = callable;
+      
+              this.update();
+          }
+          update(){
+              let _this = this;
+              let container = document.createElement('div');
+              let video = document.createElement('video');
+              setAttr(video, {src:this.url, autoplay:'true'});
+              video.addEventListener('click', function () {
+                  if(!_this.play){
+                      video.play();
+                  }else{
+                      video.pause();
+                  }
+                  _this.play = !_this.play;
+              });
+              /*
+              video.addEventListener('canplay', function () {
+                  // 开始视频全屏
+                  document.querySelector(_this.el).classList.add('fullScreen');
+                  _this.requestFullScreen();
+                  video.play();
+              });
+              */
+              video.addEventListener("ended", function () {
+                  // localStorage.setItem("watched", true);
+                  this.setAttribute('style', 'display:none');
+                  // 退出视频全屏
+                  // document.querySelector(_this.el).classList.remove('fullScreen');
+                  // _this.exitFullscreen();
+      
+                  _this.callable();
+              });
+      
+              container.appendChild(video);
+              document.querySelector(this.el).appendChild(container);
+          }
+          requestFullScreen(){ 
+              var de = document.documentElement; 
+              if (de.requestFullscreen) { 
+                  de.requestFullscreen(); 
+              } else if (de.mozRequestFullScreen) { 
+                  de.mozRequestFullScreen(); 
+              } else if (de.webkitRequestFullScreen) { 
+                  de.webkitRequestFullScreen(); 
+              } 
+          }
+      
+          exitFullscreen() { 
+              var de = document; 
+              if (de.exitFullscreen) { 
+                  de.exitFullscreen(); 
+              } else if (de.mozCancelFullScreen) { 
+                  de.mozCancelFullScreen(); 
+              } else if (de.webkitCancelFullScreen) { 
+                  de.webkitCancelFullScreen(); 
+              } 
+          }
+      }
+    </script>
+    <!-- 视频相关类-->
+    <!-- 主体-->
+    <script>
+      var start = async function(number, name){
+          var data = await (_ => {
+              return new Promise((resolve, reject) => {
+                  fetch('/timu.json')
+                  .then(res => resolve(res.json()))
+                  .catch(err => console.log(err));
+              });
+          })();
+          var testCate = new TestCate({
+              el: '.container',
+              number: number,
+              name: name,
+              data: data
+          });
+          if(!sessionStorage.getItem('iswatch')){
+              var layer = new Layer(_ => {
+                  return '接下来的视频会有所帮助';
+              }, _ => {
+                  var video = new Video('.videocontainer', 'intro.mp4', '快速安利', function(){
+                      sessionStorage.setItem('iswatch', true);
+                      testCate.run();
+                  });
+              });
+              document.body.appendChild(layer.dom);
+              layer.show();
+          }else{
+              testCate.run();
+          }
+      }
+      window.onload = function(){
+          let number = getQueryVariable('number') || (window.location.href='login.html');
+          let name = getQueryVariable('name') || (window.location.href='login.html');
+          start(number, name);
+      }
+    </script>
+    <!-- 主体-->
+  </body>
+</html>
