@@ -492,38 +492,42 @@
               xhr.responseType = 'blob';
               //请求成功回调函数
               xhr.onload = function(e) {
+                  console.log('请求中');
                   if (this.status == 200) {//请求成功
                       //获取blob对象
+                      console.log('请求成功');
                       var blob = this.response;
                       //获取blob对象地址，并把值赋给容器
                       video.setAttribute("src", URL.createObjectURL(blob));
+                      video.addEventListener('click', function () {
+                          if(!_this.play){
+                              video.play();
+                          }else{
+                              video.pause();
+                          }
+                          _this.play = !_this.play;
+                      });
+                      video.addEventListener('canplay', function () {
+                          this.removeAttribute("controls");
+                          video.play();
+                      });
+                      video.addEventListener("ended", function () {
+                          // localStorage.setItem("watched", true);
+                          this.setAttribute('style', 'display:none');
+                          // 退出视频全屏
+                          // document.querySelector(_this.el).classList.remove('fullScreen');
+                          // _this.exitFullscreen();
+
+                          _this.callable();
+                      });
+
+                      container.appendChild(video);
+                      document.querySelector(this.el).appendChild(container);
+                  }else{
+                    console.log('请求失败');
                   }
               };
               xhr.send();
-              video.addEventListener('click', function () {
-                  if(!_this.play){
-                      video.play();
-                  }else{
-                      video.pause();
-                  }
-                  _this.play = !_this.play;
-              });
-              video.addEventListener('canplay', function () {
-                  this.removeAttribute("controls");
-                  video.play();
-              });
-              video.addEventListener("ended", function () {
-                  // localStorage.setItem("watched", true);
-                  this.setAttribute('style', 'display:none');
-                  // 退出视频全屏
-                  // document.querySelector(_this.el).classList.remove('fullScreen');
-                  // _this.exitFullscreen();
-      
-                  _this.callable();
-              });
-      
-              container.appendChild(video);
-              document.querySelector(this.el).appendChild(container);
           }
           requestFullScreen(){ 
               var de = document.documentElement; 
