@@ -122,14 +122,14 @@
                   if(Array.isArray(i)){
                       for(let j of i){
                           j.hideError();
-                          if(j.score < 5){
+                          if(j.score < 10){
                               j.showError();
                           }
                       }
                   // 一种题型
                   }else{
                       j.hideError();
-                      if(j.score < 5){
+                      if(j.score < 10){
                           j.showError();
                       }
                   }
@@ -197,7 +197,7 @@
               let _this = this;
               for (let i = 0; i < group.length; i++) { //遍历Radio 
                   if (group[i].checked && group[i].value === _this.answer) {
-                      this.score = 5;
+                      this.score = 10;
                       return;                
                   }
               }
@@ -300,7 +300,7 @@
               this.bindLayer(_ => {
                   return `<div>题目分类：${this.cate}</div>
                           <div>姓名：${this.name}</div>
-                          <div>姓名：${this.number}</div>
+                          <div>学号：${this.number}</div>
                           <div>分数：${this.answerBoard.result}</div>`;
               }, -1);
               this.update();
@@ -555,7 +555,7 @@
           });
           if(!sessionStorage.getItem('iswatch')){
               var layer = new Layer(_ => {
-                  return '接下来的视频会有所帮助';
+                  return '接下来的视频会对答题有所帮助';
               }, _ => {
                   var video = new Video('.videocontainer', 'intro.mp4', '快速安利', function(){
                       sessionStorage.setItem('iswatch', true);
