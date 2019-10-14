@@ -493,14 +493,10 @@
                   }
                   _this.play = !_this.play;
               });
-              /*
               video.addEventListener('canplay', function () {
-                  // 开始视频全屏
-                  document.querySelector(_this.el).classList.add('fullScreen');
-                  _this.requestFullScreen();
+                  this.removeAttribute("controls");
                   video.play();
               });
-              */
               video.addEventListener("ended", function () {
                   // localStorage.setItem("watched", true);
                   this.setAttribute('style', 'display:none');
