@@ -10,17 +10,6 @@
   <body>
     <div class="g-container">
       <h2>登录</h2>
-      <form data-form-role="login" data-form-url="timu.html" data-form-method="GET">
-        <div class="g-username">
-          <input class="input" data-login-param="data-login-param" name="number" autocomplete="false" type="text" maxlength="64" placeholder="请输入学号"/><img class="g-username" src="https://b-gold-cdn.xitu.io/v3/static/img/greeting.1415c1c.png"/>
-        </div>
-        <div class="g-password">
-          <input class="input" data-login-param="data-login-param" name="name" autocomplete="false" type="text" maxlength="64" placeholder="请输入姓名"/><img class="g-password" src="https://b-gold-cdn.xitu.io/v3/static/img/blindfold.58ce423.png"/>
-        </div>
-        <div class="g-submit">
-          <input class="g-btn" type="submit" value="登录"/>
-        </div><img class="g-normal" src="https://b-gold-cdn.xitu.io/v3/static/img/normal.0447fe9.png" value="登录"/>
-      </form>
     </div>
     <script>
       let getUrl = function(baseurl, param){
@@ -39,24 +28,87 @@
           }
       }
       class LoginForm{
-          constructor(){
-              this.name = '';
-              this.number = '';
+          constructor(el){
+              this.el = el;
+              this.url = 'timu.html';
+              this.method = 'GET';
+      
+              this.form = (_ => { 
+                  let dom = document.createElement('form');
+                  return dom;
+              })();
+              this.number = (_ => { 
+                  let dom = document.createElement('div');
+                  dom.setAttribute('class', 'g-username');
+                  dom.innerHTML = '<input class="input" data-login-param="data-login-param" name="number" autocomplete="false" type="text" maxlength="64" placeholder="请输入学号"/><img class="g-username" src="https://b-gold-cdn.xitu.io/v3/static/img/greeting.1415c1c.png"/>';
+                  return dom;
+              })();
+              this.name = (_ => { 
+                  let dom = document.createElement('div');
+                  dom.setAttribute('class', 'g-password');
+                  dom.innerHTML = '<input class="input" data-login-param="data-login-param" name="name" autocomplete="false" type="text" maxlength="64" placeholder="请输入姓名"/><img class="g-password" src="https://b-gold-cdn.xitu.io/v3/static/img/blindfold.58ce423.png"/>';
+                  return dom;
+              })();
+              this.submit = (_ => { 
+                  let dom = document.createElement('div');
+                  dom.setAttribute('class', 'g-submit');
+                  dom.innerHTML = '<input class="g-btn" type="submit" value="登录"/>';
+                  return dom;
+              })();
+              this.form.appendChild(this.number);
+              this.form.appendChild(this.name);
+              this.form.appendChild(this.submit);
+              this.form.appendChild((_ => { let dom = document.createElement('div'); dom.innerHTML = '<img class="g-normal" src="https://b-gold-cdn.xitu.io/v3/static/img/normal.0447fe9.png" value="登录"/>'; return dom.children[0]; })());
+              
+              this.init();
+              this.onAction();
           }
-          set setname(name){
-              this.name = name;
-          }
-          set setnumber(number){
-              var reg = /^\d{11}$/;
-              if(!reg.test(number)){
-                  this.number = '';
+          init(){
+              if(!this.el){
+                  document.body.appendChild(this.form);
               }else{
-                  this.number = number;
+                  document.querySelector(this.el).appendChild(this.form);
               }
+          }
+          onAction(){
+              let _this = this;
+              this.submit.addEventListener('click', function(event){
+                  event.preventDefault();
+                  if(_this.validate()){
+                      _this.submitform();
+                  };
+              }, false)
+          }
+          validate(){
+              var reg = /^\d{11}$/;
+              if(!reg.test(this.paramnumber)){
+                  this.number.classList.add('g-error');
+                  return false;
+              }else{
+                  this.number.classList.remove('g-error');
+              }
+      
+              return true;
+          }
+          submitform(){
+              let _this = this;
+              let param = (function(){
+                  let temp = new Map();
+                  let paramsDom = _this.form.querySelectorAll(`*[data-login-param]`);
+                  for(let i of paramsDom){
+                      temp.set( i.name, i.value );
+                  }
+                  return temp;
+              })();
+              window.location.href = getUrl(this.url, param);
+          }
+          get paramnumber(){
+              return this.number.querySelector('input').value;
           }
       }
       window.onload = function(){
-          document.querySelector('*[data-form-role]').addEventListener('submit', function(event){
+          var loginform = new LoginForm('.g-container');
+          /*document.querySelector('*[data-form-role]').addEventListener('submit', function(event){
               let _this = this;
               var loginform = new LoginForm();
               event.preventDefault();
@@ -80,7 +132,7 @@
               })();
               //- console.log(getUrl(url, param));
               window.location.href = getUrl(url, param);
-          })
+          })*/
       }  
     </script>
   </body>
