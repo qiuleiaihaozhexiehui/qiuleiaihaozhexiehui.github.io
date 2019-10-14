@@ -487,12 +487,12 @@
               setAttr(video, {
                 src:this.url, 
                 style:"object-fit:fill",
-                webkit-playsinline:"true",
-                x-webkit-airplay:"true",  /*这个属性还不知道作用*/ 
-                playsinline:"true",  /*IOS微信浏览器支持小窗内播放*/ 
-                x5-video-player-type:"h5", /*启用H5播放器,是wechat安卓版特性*/
-                x5-video-orientation:"landscape", /*播放器支付的方向，landscape横屏，portraint竖屏，默认值为竖屏*/
-                x5-video-player-fullscreen:"true", /*全屏设置，设置为 true 是防止横屏*/
+                "webkit-playsinline":"true",
+                "x-webkit-airplay":"true",  /*这个属性还不知道作用*/ 
+                "playsinline":"true",  /*IOS微信浏览器支持小窗内播放*/ 
+                "x5-video-player-type":"h5", /*启用H5播放器,是wechat安卓版特性*/
+                "x5-video-orientation":"landscape", /*播放器支付的方向，landscape横屏，portraint竖屏，默认值为竖屏*/
+                "x5-video-player-fullscreen":"true", /*全屏设置，设置为 true 是防止横屏*/
                 preload="auto" /*这个属性规定页面加载完成后载入视频*/ });
               video.addEventListener('click', function () {
                   if(!_this.play){
