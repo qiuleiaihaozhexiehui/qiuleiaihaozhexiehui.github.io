@@ -484,7 +484,7 @@
               let _this = this;
               let container = document.createElement('div');
               let video = document.createElement('video');
-              setAttr(video, {src:this.url, autoplay:'true'});
+              setAttr(video, {src:this.url});
               video.addEventListener('click', function () {
                   if(!_this.play){
                       video.play();
