@@ -486,6 +486,13 @@
               let video = document.createElement('video');
               setAttr(video, {
                 src:this.url});
+              
+              var layer = new Layer(_ => {
+                  return '正在加载视频，请稍后。。。';
+              }, -1);
+              document.body.appendChild(layer.dom);
+              layer.show();
+           
               video.addEventListener('click', function () {
                   if(!_this.play){
                       video.play();
@@ -498,6 +505,7 @@
                   // 开始视频全屏
                   // document.querySelector(_this.el).classList.add('fullScreen');
                   // _this.requestFullScreen();
+                  layer.dom.classList.remove('is-visible');
                   video.play();
               });
               video.addEventListener("ended", function () {
