@@ -555,7 +555,7 @@
           });
           if(!sessionStorage.getItem('iswatch')){
               var layer = new Layer(_ => {
-                  return '接下来的视频会对答题有所帮助';
+                  return '<p>接下来的大概1分钟视频会对答题有所帮助</p>';
               }, _ => {
                   var video = new Video('.videocontainer', 'intro.mp4', '快速安利', function(){
                       sessionStorage.setItem('iswatch', true);
